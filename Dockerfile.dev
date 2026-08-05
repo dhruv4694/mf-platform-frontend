@@ -1,0 +1,41 @@
+# Dockerfile.dev — Development image for React/Vite frontend
+#
+# Same philosophy as the backend dev image:
+# The image bakes in node_modules.
+# Your source code is mounted from your machine at runtime.
+#
+# IMPORTANT NOTE — why we don't use the Grider node_modules trick here:
+# In Grider's Node.js examples he uses:
+#   volumes:
+#     - /app/node_modules   ← anonymous volume prevents host from overwriting node_modules
+#     - .:/app              ← bind mount the whole project
+#
+# For Vite specifically, we DON'T need this because:
+#   1. We only mount ./src, not the whole project
+#   2. Vite's dev server (npm run dev) doesn't need node_modules on the host
+#   3. The image's node_modules stays intact because we don't mount over /app
+#
+# WORKFLOW:
+#   Rebuild this image: only when package.json changes
+#   Normal development: never rebuild — edit .jsx/.js files, Vite HMR reloads instantly
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Step 1: Copy package files — cached until dependencies change
+COPY package*.json ./
+
+# Step 2: Install dependencies into the image layer
+# npm ci = clean install (uses package-lock.json exactly, faster than npm install)
+RUN npm ci --silent
+
+# Step 3: Copy source as fallback (overridden by volume in compose.dev.yml)
+COPY index.html .
+COPY vite.config.js .
+COPY src ./src
+
+# Step 4: Vite dev server with HMR (Hot Module Replacement)
+# --host 0.0.0.0 = listen on all interfaces so the host machine can reach it
+# Vite's HMR pushes changes to the browser without a page reload
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
