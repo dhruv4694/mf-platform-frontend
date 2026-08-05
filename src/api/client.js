@@ -2,7 +2,7 @@
 // All HTTP calls go through apiFetch — this is the single place where
 // the Authorization header, base URL, and error handling are managed.
 
-const BASE = "/api/v1";
+const BASE = `${import.meta.env.VITE_API_URL || ""}/api/v1`;
 
 /**
  * Makes an authenticated (or unauthenticated) fetch to the Spring Boot API.
@@ -99,4 +99,5 @@ export const AdminApi = {
   getBusinessDate:     (token)       => apiFetch("/admin/business-date", {}, token),
   advanceBusinessDate: (token, date) => apiFetch("/admin/business-date", { method: "PUT", body: JSON.stringify({ date }) }, token),
   runEod:              (token, businessDate) => apiFetch("/admin/eod/run", { method: "POST", body: JSON.stringify({ businessDate }) }, token),
+  runSipBatch:         (token)       => apiFetch("/admin/sip/run-batch", { method: "POST" }, token),
 };
