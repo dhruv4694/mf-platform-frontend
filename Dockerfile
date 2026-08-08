@@ -14,6 +14,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
 # Layer 1: copy ONLY package files — Docker caches this layer independently.
 # npm ci only re-runs when package.json or package-lock.json changes.
 COPY package*.json ./
