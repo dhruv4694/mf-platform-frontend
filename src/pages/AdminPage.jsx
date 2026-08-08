@@ -16,6 +16,9 @@ export function AdminPage() {
   const { mutate: runEod, loading: running, error: runErr, reset: resetRun } = useMutation();
   const [summary, setSummary] = useState(null);
 
+  const { mutate: runSipBatch, loading: runningSip, error: sipErr, reset: resetSip } = useMutation();
+  const [sipSummary, setSipSummary] = useState(null);
+
   const handleAdvance = async e => {
     e.preventDefault();
     resetAdvance();
@@ -41,11 +44,20 @@ export function AdminPage() {
     } catch {}
   };
 
+  const handleRunSipBatch = async () => {
+    resetSip();
+    setSipSummary(null);
+    try {
+      const res = await runSipBatch(api => api("/admin/sip/run-batch", { method: "POST" }));
+      setSipSummary(res);
+    } catch {}
+  };
+
   return (
     <div>
       <SectionHeader title="Admin" />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }}>
         <Card>
           <h3 style={{ fontWeight: 600, marginBottom: 16 }}>Business Date</h3>
           {loading ? null : (
@@ -84,6 +96,28 @@ export function AdminPage() {
               <Stat label="Allotted" value={summary.allotted} accent={T.emerald} />
               <Stat label="Failed" value={summary.failed} accent={summary.failed > 0 ? T.rose : undefined} />
               <Stat label="Pending (no NAV)" value={summary.pendingNoNav} accent={summary.pendingNoNav > 0 ? T.gold : undefined} />
+            </div>
+          )}
+        </Card>
+
+        <Card>
+          <h3 style={{ fontWeight: 600, marginBottom: 8 }}>Run SIP Batch</h3>
+          <p style={{ fontSize: 13, color: T.slate, marginBottom: 16 }}>
+            Manually triggers the SIP daily job for the current business date.
+            The 9 AM cron only fires on the real clock — it has no idea the
+            business date was just advanced, so use this to demo SIP
+            installments without waiting for a real morning.
+          </p>
+          <Alert msg={sipErr} />
+          <Btn variant="gold" onClick={handleRunSipBatch} disabled={runningSip} style={{ marginBottom: sipSummary ? 20 : 0 }}>
+            {runningSip ? "Running…" : "Run SIP Batch"}
+          </Btn>
+
+          {sipSummary && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+              <Stat label="Read" value={sipSummary.read} />
+              <Stat label="Written" value={sipSummary.written} accent={T.emerald} />
+              <Stat label="Skipped" value={sipSummary.skipped} accent={sipSummary.skipped > 0 ? T.rose : undefined} />
             </div>
           )}
         </Card>

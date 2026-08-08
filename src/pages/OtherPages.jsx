@@ -53,13 +53,14 @@ export function SipPage() {
             />
           ) : (
             <table>
-              <TableHead columns={["Mandate Ref", "Amount", "Frequency", "Next Due", "Status", "Actions"]} />
+              <TableHead columns={["Mandate Ref", "Amount", "Frequency", "Schedule", "Next Due", "Status", "Actions"]} />
               <tbody>
                 {mandates.map(m => (
                   <tr key={m.id} style={{ borderBottom: `1px solid ${T.border}` }}>
                     <TD style={{ fontSize: 12, color: T.slate, fontFamily: "monospace" }}>{m.mandateReference}</TD>
                     <TD style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{fmt(m.amount)}</TD>
                     <TD><Badge label={m.frequency} color="navy" /></TD>
+                    <TD style={{ fontSize: 13, color: T.slate }}>{m.scheduleDescription}</TD>
                     <TD style={{ fontSize: 13 }}>{m.nextDueDate}</TD>
                     <TD><StatusBadge status={m.status} /></TD>
                     <TD>
@@ -94,9 +95,10 @@ function SipRegisterModal({ onClose, onDone }) {
 
   const [form, setForm] = useState({
     folioId: "", schemeId: "", amount: "2000",
-    frequency: "MONTHLY", startDate: today(), endDate: "",
+    frequency: "MONTHLY", startDate: today(), endDate: "", sipDay: "5",
   });
   const { mutate, loading, error } = useMutation();
+  const isMonthly = form.frequency === "MONTHLY";
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -109,9 +111,10 @@ function SipRegisterModal({ onClose, onDone }) {
           folioId: Number(form.folioId), schemeId: Number(form.schemeId),
           amount: Number(form.amount), frequency: form.frequency,
           startDate: form.startDate, endDate: form.endDate || null,
+          sipDay: isMonthly ? Number(form.sipDay) : null,
         }),
       }));
-      onDone(`SIP registered — Mandate ref: ${res.mandateReference}`);
+      onDone(`SIP registered — Mandate ref: ${res.mandateReference}. ${res.scheduleDescription}.`);
     } catch {}
   };
 
@@ -133,9 +136,24 @@ function SipRegisterModal({ onClose, onDone }) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Input label="Start Date" type="date" value={form.startDate}
             onChange={v => set("startDate", v)} required />
+          {isMonthly ? (
+            <Input label="Day of Month" type="number" value={form.sipDay}
+              onChange={v => set("sipDay", v)} min="1" max="31" required />
+          ) : (
+            <Input label="End Date (optional)" type="date" value={form.endDate}
+              onChange={v => set("endDate", v)} />
+          )}
+        </div>
+        {isMonthly && (
           <Input label="End Date (optional)" type="date" value={form.endDate}
             onChange={v => set("endDate", v)} />
-        </div>
+        )}
+        {!isMonthly && (
+          <div style={{ fontSize: 12, color: T.slate }}>
+            {form.frequency} SIPs use a fixed schedule (not a day you choose) —
+            you'll see the exact deduction days once the mandate is registered.
+          </div>
+        )}
         <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
           <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
           <Btn type="submit" variant="gold" disabled={loading}>
