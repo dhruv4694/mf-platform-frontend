@@ -26,6 +26,18 @@ COPY index.html .
 COPY vite.config.js .
 COPY src ./src
 
+# VITE_API_URL must be available at BUILD time, not runtime — Vite bakes
+# import.meta.env.VITE_* values into the compiled JS bundle during `vite
+# build`. Passing it as a normal `environment:` entry in docker-compose
+# (a runtime-only mechanism) would have no effect on an already-built
+# static bundle. Pass it as a build arg instead:
+#   docker build --build-arg VITE_API_URL=https://your-backend-host .
+# If unset, api/client.js falls back to a relative "/api/v1" path — only
+# correct when something in front of nginx proxies /api to the backend
+# (this image's nginx.conf does not; see nginx.conf for why).
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
 RUN npm run build
 # Output: /app/dist/
 
@@ -35,7 +47,9 @@ FROM nginx:alpine AS runtime
 # Copy built static files from builder — nothing else
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# nginx config: serves React app, proxies /api to Spring Boot
+# nginx config: serves the built React app only. It does NOT proxy /api —
+# the frontend calls the backend directly via VITE_API_URL, baked in above
+# at build time. See nginx.conf for the full explanation.
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
